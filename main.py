@@ -67,11 +67,20 @@ async def on_ready():
 simulate=db["simulate"]
 @client.event
 async def on_message(message):
+  msg = message.content
   global simulate
   if message.author == client.user:
     return
   if message.content.startswith('!simulateai'):
     simulate = db["simulate"]
+    if message.content.endswith == message.content.startswith:
+      i = 0
+    else:
+      i = 1
+    bool1 = msg.split('!simulateai',i)[i]
+    if bool1 == '':
+      await message.channel.send(db["simulate"])
+      return
     bool1 = message.content.split('simulateai ',1)[1]
     if bool1.lower() == 'false': 
       db["simulate"] = False
@@ -86,7 +95,6 @@ async def on_message(message):
     if message.content.startswith('!start'):
       await message.channel.send('!hi')
       db[simulate] = False
-  msg = message.content
   if message.content.startswith('!threaten'):
     await message.channel.send('You have succesefuly threatened nobody!')
   if message.content.startswith('!war') or message.content.startswith('!War'):
@@ -110,7 +118,6 @@ async def on_message(message):
     await message.channel.send(':(')
     time.sleep(1)
     await message.channel.send('Why are you so casual about this?')
-    db["simulate"] = True
   if message.content.startswith('!Thats'):
     time.sleep(0.5)
     await message.channel.send('Ok, bye!')
