@@ -64,7 +64,7 @@ async def shop_person(message,ident):
 @client.event
 async def on_ready():
   print('We have logged in as {0.user}'.format(client))
-simulate=False
+simulate=db["simulate"]
 @client.event
 async def on_message(message):
   global simulate
@@ -96,7 +96,11 @@ async def on_message(message):
     await message.channel.send('!how are you?')
   if message.content.startswith("!I'm"):
     time.sleep(0.5)
-    await message.channel.send("!I'm alright, but my boss fired me.")
+    ran1 = round(uniform(0,1))
+    if ran1 == 0:
+      await message.channel.send("!I'm alright, but my boss fired me.")
+    elif ran1 == 1:
+      await message.channel.send("!I'm great, I recently got a new house!")
   if message.content.startswith('!Oh'):
     time.sleep(1)
     await message.channel.send('*sigh*')
@@ -106,7 +110,10 @@ async def on_message(message):
     await message.channel.send(':(')
     time.sleep(1)
     await message.channel.send('Why are you so casual about this?')
-    db[simulate] = True
+    db["simulate"] = True
+  if message.content.startswith('!Thats'):
+    time.sleep(0.5)
+    await message.channel.send('Ok, bye!')
   if message.content.startswith('!shop'):
     if message.content.endswith == message.content.startswith:
       i = 0
