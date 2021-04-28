@@ -8,31 +8,95 @@ import random as r
 from discord.ext.commands import Bot
 from random import uniform
 from keep_alive import keep_alive
+from discord.ext import commands
+from timer import timer
 client=discord.Client()
 my_secret = os.environ['!F!J']
-shop = [["soldier", 100],["gun",50]]
-def example():
+shop = {"soldier": 100, "sailor":100,"gun":50, "machine gun":75,"assault rifle":85,"boat":200, "ship":1000}
+async def examples(message):
   response = requests.get("https://www.boredbutton.com/random")
   json_data=json.loads(response)
+  #next\
+  await client.delete_message(message)
   return(json_data)
+  #next
+  messsssss='%alarm {1.mention}30 Red Trench Complete!'.format(message,text_channel)
+class UpdateRCur():
+  if "RedMoney" in db.keys():
+    global RedCurrency
+    RedCurrency = db["RedMoney"]
+  else:
+    db["RedMoney"]=1000
+    RedCurrency=db["RedMoney"]
+  def redMin(amountRed):
+    global RedCurrency
+    RedCurrency-=amountRed
+    db["RedMoney"] = RedCurrency
+  def redAdd(amountRPlus):
+    global RedCurrency
+    RedCurrency+=amountRPlus
+    db["RedMoney"]=RedCurrency
 class UpdateBCur():
   if "BlueMoney" in db.keys():
+    global BlueCurrency
     BlueCurrency = db["BlueMoney"]
-    def blueMin(amountB):
-      BlueCurrency-=amountB
-      db["BlueMoney"] = BlueCurrency
-    def blueAdd(amountBPlus):
-      BlueCurrency+=amountBPlus
-      db["BlueMoney"]=BlueCurrency
   else:
     db["BlueMoney"]=1000
     BlueCurrency=db["BlueMoney"]
+  def blueMin(amountB):
+    global BlueCurrency
+    BlueCurrency-=amountB
+    db["BlueMoney"] = BlueCurrency
+  def blueAdd(amountBPlus):
+    global BlueCurrency
+    BlueCurrency+=amountBPlus
+    db["BlueMoney"]=BlueCurrency
+@commands.command(pass_context=True)
+async def shopRole(self, ctx):
+  role = discord.utils.get(ctx.guild.roles,name="Blue Team")
+  if role in self.roles:
+    say = 'Blue'
+    return say
+  else:
+    role = discord.utils.get(ctx.guild.roles,name="Red Team")
+    if role in self.roles:
+      say = 'Red'
+      return say
+    else:
+      say = 'N/A'
+@commands.command(pass_context=True)
+async def ModRole(self, ctx):
+  role = discord.utils.get(ctx.guild.roles,name="Moderators")
+  if role in self.roles:
+    say = 'Mod'
+    return say
+  else:
+    say = 'non-mod'
 @client.event
-async def shop_input(message2,ident):
+async def shop_person(message,ident,item,author):
+  userinput = await client.wait_for("message")
+  await shop_input(userinput,ident,item,author)
+@client.event
+async def shop_input(message2,ident,item,author):
   if message2.author.name != ident:
-    await shop_person(message2,ident)
+    await shop_person(message2,ident,author)
   if message2.content.lower() == "y":
-    await message2.channel.send('Purchase Complete!')
+    Complete=''
+    rolewhat=await shopRole(message2.author,message2)
+    if rolewhat=='Blue':
+      UpdateBCur.blueMin(shop.get(item))
+      Complete="Purchase Complete! Your team now has "
+      Complete+=str(db["BlueMoney"])
+      Complete+=" dollars."
+    elif rolewhat=='Red':
+      UpdateRCur.redMin(shop.get(item))
+      Complete="Purchase Complete! Your team now has "
+      Complete+=str(db["RedMoney"])
+      Complete+=" dollars."
+    else:
+      await message2.channel.send("sorry, you can't use that command.")
+      return
+    await message2.channel.send(Complete)
   elif message2.content.lower() == "n":
     await message2.channel.send('Purchase Canceled!')
   else:
@@ -44,22 +108,19 @@ async def bot_status():
   activity = discord.Game(name="!war", type=3)
   await Bot.change_presence(self=client,activity=activity)
 
-class UpdateRCur():
-  if "RedMoney" in db.keys():
-    RedCurrency = db["RedMoney"]
-    def redMin(amountRed):
-      RedCurrency-=amountRed
-      db["RedMoney"] = RedCurrency
-    def redAdd(amountRPlus):
-      RedCurrency+=amountRPlus
-      RedCurrency+=amountRPlus
-      db["RedMoney"]=RedCurrency
+@commands.command(pass_context=True)
+async def Role(self, ctx):
+  role = discord.utils.get(ctx.guild.roles,name="Blue Team")
+  if role in self.roles:
+      say = 'Blue'
+      return say
   else:
-    db["RedMoney"]=1000
-@client.event
-async def shop_person(message,ident):
-  userinput = await client.wait_for("message")
-  await shop_input(userinput,ident)
+    role = discord.utils.get(ctx.guild.roles,name="Red Team")
+    if role in self.roles:
+      say = 'Red'
+      return say
+    else:
+      say = 'N/A'
 
 @client.event
 async def on_ready():
@@ -99,6 +160,8 @@ async def on_message(message):
     await message.channel.send('You have succesefuly threatened nobody!')
   if message.content.startswith('!war') or message.content.startswith('!War'):
     await message.channel.send('War has already started, dummy!')
+  if message.content.startswith('!sus'):
+    await message.channel.send('When the imposter is sus! 😳')
   if message.content.startswith('!hi'):
     time.sleep(0.5)
     await message.channel.send('!how are you?')
@@ -128,12 +191,24 @@ async def on_message(message):
       i = 1
     item = msg.split('!shop',i)[i]
     if item == '':
-      await message.channel.send(shop)
+      embed = discord.Embed(title="Shop", description="Buy stuff here!")
+      for key, value in shop.items():
+        title=key
+        cost="Costs "
+        cost+=str(value)
+        cost+=" dollars."
+        description=cost
+        embed.add_field(name=title, value=description)
+      await message.channel.send(embed=embed)
       return
-    if item == ' soldier' or item == " gun":
-      await message.channel.send('do you REALLY wanna buy that? think about it. Type [y] for yes, [n] for no.')
+    if item == ' soldier' or item == ' sailor' or item == ' gun' or item == ' machine gun' or item == ' assault rifle' or item == ' boat' or item == ' ship':
+      thing=item[1:]
+      sendm='Are you sure you wanna buy that? it costs '
+      sendm+=str(shop.get(thing))
+      sendm+=' dollars. Type [y] for yes, [n] for no.'
+      await message.channel.send(sendm)
       ident = message.author.name
-      await shop_person(message,ident)
+      await shop_person(message,ident,thing,message.author)
     else:
       await message.channel.send('we actually dont have that')
   if message.content.startswith('!invade'):
@@ -147,14 +222,37 @@ async def on_message(message):
   if message.content.startswith('!build'):
     buildwhat = msg.split('!build ',1)[1]
     if buildwhat == 'Trench' or buildwhat == 'trench':
-      await message.channel.send('%alarm #war 30 Trench Complete!')
+      say = await Role(message.author,message)
+      if say == 'Blue':
+        await message.channel.send("timer started!")
+        await timer(30)
+        msg = 'Blue Trench Complete!'
+      elif say == 'Red':
+        
+        msg = 'Red Trench Complete!'
+      else:
+        msg = "you can't use this command!"
+      channel = client.get_channel(834493073391616054)
+      await channel.send(msg)
     else:
       await message.channel.send('I dunno what your talking about')
   if message.content.startswith('!message'):
     await message.channel.send('this is the pure message:')
     await message.channel.send(message)
-    await message.channel.send('this is the traslated message:')
+    await message.channel.send('this is the translated message:')
     await message.channel.send(message.content)
+  if message.content.startswith('!bluemoney'):
+    money_display=db["BlueMoney"]
+    await message.channel.send(money_display)
+  if message.content.startswith('!redmoney'):
+    money_display=db["RedMoney"]
+    await message.channel.send(money_display)
+  if message.content.startswith("!testdonaafj"):
+    mod = await ModRole(message.author,message)
+    if mod=="Mod":
+      db["BlueMoney"]=1000
+    else:
+      await message.channel.send("Sorry, only moderators can use this command.")
   await bot_status()
 keep_alive()
 client.run(my_secret)
