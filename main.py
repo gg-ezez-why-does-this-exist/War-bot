@@ -13,13 +13,23 @@ from timer import timer
 client=discord.Client()
 my_secret = os.environ['!F!J']
 shop = {"soldier": 100, "sailor":100,"gun":50, "machine gun":75,"assault rifle":85,"boat":200, "ship":1000}
+RedInven=[]
+if "RedInven" in db.keys():
+  RedInven = db["RedInven"]
+else:
+  db["RedInven"]=RedInven
+BlueInven=[]
+if "BlueInven" in db.keys():
+  BlueInven = db["BlueInven"]
+else:
+  db["BlueInven"]=BlueInven
 async def examples(message):
   response = requests.get("https://www.boredbutton.com/random")
   json_data=json.loads(response)
-  #next\
+
   await client.delete_message(message)
   return(json_data)
-  #next
+
   messsssss='%alarm {1.mention}30 Red Trench Complete!'.format(message,text_channel)
 class UpdateRCur():
   if "RedMoney" in db.keys():
@@ -51,6 +61,35 @@ class UpdateBCur():
     global BlueCurrency
     BlueCurrency+=amountBPlus
     db["BlueMoney"]=BlueCurrency
+class UpdateBInven:
+  def blueIMin(item):
+    BlueInven.remove(item)
+    db["BlueInven"] = BlueInven
+  def blueIAdd(item):
+    BlueInven.append(item)
+    db["BlueInven"]=BlueInven
+  async def blueIo(*args):
+    oldkey=''
+    items={}
+    for key in BlueInven:
+      keytester=key
+      multipleN=0
+      if keytester==oldkey:
+        pass
+      else:
+        for key in BlueInven:
+          if keytester==key:
+            multipleN+=1
+        items[keytester]=multipleN
+        oldkey=keytester
+    return(items)
+class UpdateRInven:
+  def redIMin(item):
+    RedInven.remove(item)
+    db["RedInven"] = RedInven
+  def redIAdd(item):
+    RedInven.append(item)
+    db["RedInven"]=RedInven
 @commands.command(pass_context=True)
 async def shopRole(self, ctx):
   role = discord.utils.get(ctx.guild.roles,name="Blue Team")
@@ -73,26 +112,48 @@ async def ModRole(self, ctx):
   else:
     say = 'non-mod'
 @client.event
-async def shop_person(message,ident,item,author):
+async def shop_person(message,ident,item,author,itemcount):
   userinput = await client.wait_for("message")
-  await shop_input(userinput,ident,item,author)
+  await shop_input(userinput,ident,item,author,itemcount)
 @client.event
-async def shop_input(message2,ident,item,author):
+async def howmuch(message,ident,author):
+  num = await client.wait_for("message")
+  if message.author.name != ident:
+    howmuch(message,ident,author)
+  else:
+    return(num)
+@client.event
+async def shop_input(message2,ident,item,author,itemcount):
   if message2.author.name != ident:
-    await shop_person(message2,ident,author)
+    await shop_person(message2,ident,item,author,itemcount)
   if message2.content.lower() == "y":
     Complete=''
     rolewhat=await shopRole(message2.author,message2)
     if rolewhat=='Blue':
-      UpdateBCur.blueMin(shop.get(item))
-      Complete="Purchase Complete! Your team now has "
-      Complete+=str(db["BlueMoney"])
-      Complete+=" dollars."
+      BlueMoneyTest=BlueCurrency
+      BlueMoneyTest-=shop.get(item)*int(str(itemcount.content))
+      if not BlueMoneyTest < 0:
+        for itemcount in range(int(str(itemcount.content))):
+          UpdateBCur.blueMin(shop.get(item))
+          UpdateBInven.blueIAdd(item)
+        Complete="Purchase Complete! Your team now has "
+        Complete+=str(db["BlueMoney"])
+        Complete+=" dollars."
+      else:
+        await message2.channel.send("You don't have enough money!")
+        return
     elif rolewhat=='Red':
-      UpdateRCur.redMin(shop.get(item))
-      Complete="Purchase Complete! Your team now has "
-      Complete+=str(db["RedMoney"])
-      Complete+=" dollars."
+      RedMoneyTest=RedCurrency
+      RedMoneyTest-=shop.get(item)
+      if not RedMoneyTest < 0:
+        UpdateRCur.redMin(shop.get(item))
+        Complete="Purchase Complete! Your team now has "
+        Complete+=str(db["RedMoney"])
+        Complete+=" dollars."
+        UpdateRInven.redIAdd(item)
+      else:
+        await message2.channel.send("You don't have enough money!")
+        return
     else:
       await message2.channel.send("sorry, you can't use that command.")
       return
@@ -121,7 +182,6 @@ async def Role(self, ctx):
       return say
     else:
       say = 'N/A'
-
 @client.event
 async def on_ready():
   print('We have logged in as {0.user}'.format(client))
@@ -130,6 +190,10 @@ simulate=db["simulate"]
 async def on_message(message):
   msg = message.content
   global simulate
+  global BlueCurrency
+  global RedCurrency
+  BlueCurrency=db["BlueMoney"]
+  RedCurrency=db["RedMoney"]
   if message.author == client.user:
     return
   if message.content.startswith('!simulateai'):
@@ -185,30 +249,27 @@ async def on_message(message):
     time.sleep(0.5)
     await message.channel.send('Ok, bye!')
   if message.content.startswith('!shop'):
-    if message.content.endswith == message.content.startswith:
-      i = 0
-    else:
-      i = 1
-    item = msg.split('!shop',i)[i]
-    if item == '':
-      embed = discord.Embed(title="Shop", description="Buy stuff here!")
-      for key, value in shop.items():
-        title=key
-        cost="Costs "
-        cost+=str(value)
-        cost+=" dollars."
-        description=cost
-        embed.add_field(name=title, value=description)
-      await message.channel.send(embed=embed)
-      return
-    if item == ' soldier' or item == ' sailor' or item == ' gun' or item == ' machine gun' or item == ' assault rifle' or item == ' boat' or item == ' ship':
-      thing=item[1:]
+    embed = discord.Embed(title="Shop", description="Buy stuff here!")
+    for key, value in shop.items():
+      title=key
+      cost="Costs "
+      cost+=str(value)
+      cost+=" dollars."
+      description=cost
+      embed.add_field(name=title, value=description)
+    await message.channel.send(embed=embed)
+    return
+  if message.content.startswith('!buy'):
+    item = message.content.split('!buy ',1)[1]
+    if item in shop:
+      await message.channel.send('How much would you like to buy?')
+      ident = message.author.name
+      itemcount=await howmuch(message,ident,message.author)
       sendm='Are you sure you wanna buy that? it costs '
-      sendm+=str(shop.get(thing))
+      sendm+=str(shop.get(item)*int(itemcount.content))
       sendm+=' dollars. Type [y] for yes, [n] for no.'
       await message.channel.send(sendm)
-      ident = message.author.name
-      await shop_person(message,ident,thing,message.author)
+      await shop_person(message,ident,item,message.author,itemcount)
     else:
       await message.channel.send('we actually dont have that')
   if message.content.startswith('!invade'):
@@ -224,11 +285,12 @@ async def on_message(message):
     if buildwhat == 'Trench' or buildwhat == 'trench':
       say = await Role(message.author,message)
       if say == 'Blue':
-        await message.channel.send("timer started!")
+        await message.channel.send("Timer started!")
         await timer(30)
         msg = 'Blue Trench Complete!'
       elif say == 'Red':
-        
+        await message.channel.send("Timer started!")
+        await timer(30)
         msg = 'Red Trench Complete!'
       else:
         msg = "you can't use this command!"
@@ -247,12 +309,89 @@ async def on_message(message):
   if message.content.startswith('!redmoney'):
     money_display=db["RedMoney"]
     await message.channel.send(money_display)
-  if message.content.startswith("!testdonaafj"):
+  if message.content.startswith("!restoremod"):
     mod = await ModRole(message.author,message)
     if mod=="Mod":
+      await message.channel.send("Money Restored")
       db["BlueMoney"]=1000
+      UpdateBCur()
     else:
       await message.channel.send("Sorry, only moderators can use this command.")
+  if message.content.startswith("!blueinven"):
+    embed1 = discord.Embed(title="Blue Inventory", description="Blue Team Bought these things:")
+    List1=await UpdateBInven.blueIo()
+    for key,value in List1.items:
+      title1=key
+      title1+=' x'
+      title1+=str(value)
+      embed1.add_field(name=title1,value='------------------------------')
+    await message.channel.send(embed=embed1)
+  if message.content.startswith("!redinven"):
+    embed2 = discord.Embed(title="Red Inventory", description="Red Team Bought these things:")
+    for key in RedInven:
+      title2=key
+      embed2.add_field(name=title2,value='------------------------------')
+    await message.channel.send(embed=embed2)
   await bot_status()
+  if message.content.startswith("!modclear"):
+    mod = await ModRole(message.author,message)
+    if mod=="Mod":
+      await message.channel.send("Inventory Cleared")
+      BlueInven.clear()
+    else:
+      await message.channel.send("Sorry, only moderators can use this command.")
+  if message.content.startswith('!organize'):
+    await UpdateBInven.blueIo(message)
+  if message.content.startswith('!equip'):
+    try:
+      equip=message.content.split(' ',2)
+      equip.remove('!equip')
+      equiptowhat=equip[0]
+      equipwhat=equip[1]
+      whatrole=await shopRole(message.author,message)
+      if whatrole=='Blue':
+        inven=BlueInven
+        if equiptowhat.lower()=='soldier':
+          if equipwhat.lower()=='gun':
+            UpdateBInven.blueIAdd('Weaponized Soldier')
+            bought='Weaponized Soldier'
+          if equipwhat.lower()=='machine gun':
+            UpdateBInven.blueIAdd('Machine Gunner')
+            bought='Machine Gunner'
+          if equipwhat.lower()=='assault rifle':
+            UpdateBInven.blueIAdd('Assault Rifleman')
+            bought='Assault Rifleman'
+        else:
+          await message.channel.send('something is going on...')
+        UpdateBInven.blueIMin(equipwhat)
+        UpdateBInven.blueIMin(equiptowhat)
+      elif whatrole=='Red':
+        inven=RedInven
+        if equiptowhat.lower()=='soldier':
+          if equipwhat.lower()=='gun':
+            UpdateRInven.redIAdd('Weaponized Soldier')
+            bought='Weaponized Soldier'
+          elif equipwhat.lower()=='machine gun':
+            UpdateRInven.redIAdd('Machine Gunner')
+            bought='Machine Gunner'
+          elif equipwhat.lower()=='assault rifle':
+            UpdateRInven.redIAdd('Assault Rifleman')
+            bought='Assault Rifleman'
+        UpdateRInven.redIMin(equipwhat)
+        UpdateRInven.redIMin(equiptowhat)
+      if equiptowhat in inven:
+        sendw1=equiptowhat
+        sendw1+=" has equipped the weapon "
+        sendw1+=equipwhat
+        sendw1+='.'
+        await message.channel.send(sendw1)
+      else:
+        await message.channel.send("YOU DON'T HAVE THE REQUIRED THINGS, YOU LIAR.")
+        if whatrole=='Blue':
+          UpdateBInven.blueIMin(bought)
+        elif whatrole=='Red':
+          UpdateRInven.redIMin(bought)
+    except:
+      await message.channel.send('Errorsss')  
 keep_alive()
 client.run(my_secret)
