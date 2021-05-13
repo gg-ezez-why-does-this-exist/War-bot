@@ -9,7 +9,7 @@ from discord.ext.commands import Bot
 from random import uniform
 from keep_alive import keep_alive
 from discord.ext import commands
-from discord.ext.commands import Bot, Greedy
+from discord import Guild
 from discord import User
 from timer import timer
 bot = Bot(command_prefix='!', description='Hi')
@@ -34,11 +34,11 @@ async def STUFF(message):
   return(json_data)
 
   messsssss='%alarm {1.mention}30 Red Trench Complete!'.format(message,text_channel)
-
-@bot.command()
-async def dm(ctx, users: Greedy[User]):
-  for user in users:
-    await user.send("I DME YOU BUDDY")
+async def dm(userID):
+  await bot.wait_until_ready()
+  user = bot.get_user(userID)
+  print(user)
+  await user.send('HI')
 class UpdateRCur():
   if "RedMoney" in db.keys():
     global RedCurrency
@@ -484,8 +484,10 @@ async def on_message(message):
   if message.content.startswith('!data'):
     await message.channel.send(db["BlueMoney"])
   if message.content.startswith("!dm"):
-    whoo=message.content.split(" ",1)[1]
-    await client.send_message(whoo, "HI I DMED YOU BUDDY!")
-    dm()
+    user_id=message.content.split(" ",1)[1]
+    user_id=user_id.translate({ord(i): None for i in '<>@!'})
+    user_id_list = [int(user_id)]
+    for user_id in user_id_list:
+      user=await dm(user_id)
 keep_alive()
 client.run(my_secret)
