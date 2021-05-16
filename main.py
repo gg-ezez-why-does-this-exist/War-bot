@@ -33,11 +33,10 @@ async def STUFF(message):
   await client.delete_message(message)
   return(json_data)
 
-  messsssss='%alarm {1.mention}30 Red Trench Complete!'.format(message,text_channel)
+  messssss='%alarm {1.mention}30 Red Trench Complete!'.format(message,text_channel)
 async def dm(userID):
-  await bot.wait_until_ready()
-  user = bot.get_user(userID)
-  print(user)
+  await client.wait_until_ready()
+  user = await client.fetch_user(userID)
   await user.send('HI')
 class UpdateRCur():
   if "RedMoney" in db.keys():
@@ -133,11 +132,13 @@ class UpdateBbuilds:
   else:
     db["BlueBuilds"]={}
     BlueBuilds=db["BlueBuilds"]
-  def blueMin(item):
+  async def blueMin(item,ctx):
     try:
       del BlueBuilds[item]
       db["BlueBuilds"] = BlueBuilds
-    except:
+    except KeyError:
+      await ctx.send("YOU DON'T HAVE THAT BUILD, BUDDY!")
+    else:
       return
   def blueAdd(item):
     if item in BlueBuilds:
@@ -486,8 +487,6 @@ async def on_message(message):
   if message.content.startswith("!dm"):
     user_id=message.content.split(" ",1)[1]
     user_id=user_id.translate({ord(i): None for i in '<>@!'})
-    user_id_list = [int(user_id)]
-    for user_id in user_id_list:
-      user=await dm(user_id)
+    await dm(user_id)
 keep_alive()
 client.run(my_secret)
