@@ -1,5 +1,6 @@
 import discord
 import time
+import random
 import os
 import requests
 import json
@@ -9,13 +10,13 @@ from discord.ext.commands import Bot
 from random import uniform
 from keep_alive import keep_alive
 from discord.ext import commands
-from discord import Guild
-from discord import User
 from timer import timer
+from discord_components import DiscordComponents, Button, ButtonStyle
 bot = Bot(command_prefix='!', description='Hi')
 client=discord.Client()
 my_secret = os.environ['!F!J']
-shop = {"soldier": 100, "sailor":100,"gun":50, "machine gun":75,"assault rifle":85,"boat":200, "ship":1000}
+display_shop = {"🪖 soldier 🪖": 100, "⛵ sailor ⛵":100,"<:pistol:891380898275135498>gun<:pistol:891380898275135498>":50, "<:machinegun:891401257514860555>machine gun<:machinegun:891401257514860555>":75,"<:assaultrifle:891408408371167242>assault rifle<:assaultrifle:891408408371167242>":85,"<:sniperrifle:891407196200509440>sniper rifle<:sniperrifle:891407196200509440>":100,"🛥 boat 🛥":200,"🛳️ ship 🛳️":1000}
+shop = {"soldier": 100, "sailor":100,"gun":50, "machine gun":75,"assault rifle":85,"sniper rifle":100,"boat":200,"ship":1000}
 RedInven=[]
 if "RedInven" in db.keys():
   RedInven = db["RedInven"]
@@ -26,6 +27,7 @@ if "BlueInven" in db.keys():
   BlueInven = db["BlueInven"]
 else:
   db["BlueInven"]=BlueInven
+BlueBuilds={}
 async def STUFF(message):
   response = requests.get("https://www.boredbutton.com/random")
   json_data=json.loads(response)
@@ -37,7 +39,7 @@ async def STUFF(message):
 async def dm(userID):
   await client.wait_until_ready()
   user = await client.fetch_user(userID)
-  await user.send('HI')
+  await user.send('Filler Text')
 class UpdateRCur():
   if "RedMoney" in db.keys():
     global RedCurrency
@@ -125,6 +127,69 @@ async def shopRole(self, ctx):
       return say
     else:
       say = 'N/A'
+class UpdateRbuilds:
+  if "RedBuilds" in db.keys():
+    global RedBuilds
+    RedBuilds = db["RedBuilds"]
+  else:
+    db["RedBuilds"]={}
+    RedBuilds=db["RedBuilds"]
+  async def redMin(item,ctx):
+    try:
+      del RedBuilds[item]
+      db["RedBuilds"] = RedBuilds
+    except KeyError:
+      await ctx.send("YOU DON'T HAVE THAT BUILD, BUDDY!")
+    else:
+      return
+  def redAdd(item):
+    #this just gets all of the previous builds and their number
+    if item in RedBuilds:
+      oldkey=''
+      items={}
+      for key in RedBuilds:
+        keytester=key
+        multipleN=0
+        if keytester==oldkey:
+          pass
+        else:
+          for key in RedInven:
+            if keytester==key:
+              multipleN+=1
+          items[keytester]=multipleN
+          oldkey=keytester
+      x=items.get(item)
+      x+=1
+      name=str(item+" "+str(x))
+      RedBuilds[name]={}
+    else:
+      RedBuilds[item]={}
+    db["RedBuilds"]=RedBuilds
+  def blueItemAdd(item,what,howmuch):
+    if item in RedBuilds:
+      if what in item:
+        for i in range(howmuch):
+          UpdateRInven.redImin(what)
+        item[what]+=howmuch
+      else:
+        item[what]=howmuch
+  def redItemMin(item,what,howmuch):
+    if item in RedBuilds:
+      if what in item:
+        for i in range(howmuch):
+          UpdateRInven.RedIAdd(what)
+        item[what]-=howmuch
+      else:
+        pass
+  async def redIo(*args):
+    items={}
+    things=[]
+    for key in RedBuilds:
+      build=key
+      for key in build:
+          things.append(build)
+      items[build]=things
+    return(items)
 class UpdateBbuilds:
   if "BlueBuilds" in db.keys():
     global BlueBuilds
@@ -141,6 +206,7 @@ class UpdateBbuilds:
     else:
       return
   def blueAdd(item):
+    #this just gets all of the previous builds and their number
     if item in BlueBuilds:
       oldkey=''
       items={}
@@ -150,15 +216,17 @@ class UpdateBbuilds:
         if keytester==oldkey:
           pass
         else:
-          for key in RedInven:
+          for key in BlueInven:
             if keytester==key:
               multipleN+=1
           items[keytester]=multipleN
           oldkey=keytester
       x=items.get(item)
       x+=1
-      name=item,x
-    BlueBuilds[name]={}
+      name=str(item+" "+str(x))
+      BlueBuilds[name]={}
+    else:
+      BlueBuilds[item]={}
     db["BlueBuilds"]=BlueBuilds
   def blueItemAdd(item,what,howmuch):
     if item in BlueBuilds:
@@ -176,6 +244,15 @@ class UpdateBbuilds:
         item[what]-=howmuch
       else:
         pass
+  async def blueIo(*args):
+    items={}
+    things=[]
+    for key in BlueBuilds:
+      build=key
+      for key in build:
+          things.append(build)
+      items[build]=things
+    return(items)
 @commands.command(pass_context=True)
 async def ModRole(self, ctx):
   role = discord.utils.get(ctx.guild.roles,name="Moderators")
@@ -184,6 +261,7 @@ async def ModRole(self, ctx):
     return say
   else:
     say = 'non-mod'
+    return say
 @client.event
 async def shop_person(message,ident,item,author,itemcount):
   userinput = await client.wait_for("message")
@@ -257,6 +335,7 @@ async def Role(self, ctx):
       say = 'N/A'
 @client.event
 async def on_ready():
+  res=DiscordComponents(client)
   print('We have logged in as {0.user}'.format(client))
 simulate=db["simulate"]
 @client.event
@@ -323,7 +402,8 @@ async def on_message(message):
     await message.channel.send('Ok, bye!')
   if message.content.startswith('!shop'):
     embed = discord.Embed(title="Shop", description="Buy stuff here!")
-    for key, value in shop.items():
+    #lol this is so broken
+    for key, value in display_shop.items():
       title=key
       cost="Costs "
       cost+=str(value)
@@ -333,7 +413,7 @@ async def on_message(message):
     await message.channel.send(embed=embed)
     return
   if message.content.startswith('!buy'):
-    item = message.content.split('!buy ',1)[1]
+    item=message.content.split("!buy ",1)[1]
     if item in shop:
       await message.channel.send('How much would you like to buy?')
       ident = message.author.name
@@ -345,25 +425,18 @@ async def on_message(message):
       await shop_person(message,ident,item,message.author,itemcount)
     else:
       await message.channel.send('we actually dont have that')
-  if message.content.startswith('!invade'):
-    invasion=round(r.uniform(0,1))
-    if invasion == 1:
-      await message.channel.send("Success! +1 trench!")
-      #trenchs += 1
-    else:
-      await message.channel.send("Failure! -1 soldier!")
-      #soldiers -= 1
   if message.content.startswith('!build'):
     buildwhat = msg.split('!build ',1)[1]
-    if buildwhat == 'Trench' or buildwhat == 'trench':
+    if buildwhat.lower()=='trench':
       say = await Role(message.author,message)
       if say == 'Blue':
         await message.channel.send("Timer started!")
-        await timer(30)
+        await timer(15)
         msg = 'Blue Trench Complete!'
+        UpdateBbuilds.blueAdd("Blue Trench")
       elif say == 'Red':
         await message.channel.send("Timer started!")
-        await timer(30)
+        await timer(15)
         msg = 'Red Trench Complete!'
       else:
         msg = "you can't use this command!"
@@ -371,6 +444,16 @@ async def on_message(message):
       await channel.send(msg)
     else:
       await message.channel.send('I dunno what your talking about')
+  if message.content.startswith("!doin"):
+    randomthing = random.randint(1, 2)
+    if randomthing == 1:
+      await message.channel.send(file=discord.File(r'doin1.mp3'))
+    if randomthing == 2:
+      await message.channel.send(file=discord.File(r'doin2.mp3'))
+  if message.content.startswith("!wow"):
+    await message.channel.send(file=discord.File(r'sus.mp4'))
+  if message.content.startswith("!easter") or message.content.startswith("!eater"):
+    await message.channel.send("🥚 Eater eggs! 🥚🥚 Eater eggs! 🥚")
   if message.content.startswith('!message'):
     await message.channel.send('this is the pure message:')
     await message.channel.send(message)
@@ -384,6 +467,7 @@ async def on_message(message):
     await message.channel.send(money_display)
   if message.content.startswith("!restoremod"):
     mod = await ModRole(message.author,message)
+    print(mod)
     if mod=="Mod":
       await message.channel.send("Money Restored")
       db["BlueMoney"]=1000
@@ -449,8 +533,12 @@ async def on_message(message):
           if equipwhat.lower()=='assault rifle':
             UpdateBInven.blueIAdd('Assault Rifleman')
             bought='Assault Rifleman'
+          if equipwhat.lower() == "sniper rifle":
+            UpdateBInven.blueIAdd('Sniper')
+            bought='Sniper'            
         else:
           await message.channel.send('something is going on...')
+          return
         UpdateBInven.blueIMin(equipwhat)
         UpdateBInven.blueIMin(equiptowhat)
       elif whatrole=='Red':
@@ -474,6 +562,12 @@ async def on_message(message):
           elif equipwhat.lower()=='assault rifle':
             UpdateRInven.redIAdd('Assault Rifleman')
             bought='Assault Rifleman'
+          elif equipwhat.lower()=='sniper rifle':
+            UpdateRInven.redIAdd('Sniper')
+            bought='Sniper'
+          else:
+            await message.channel.send("something is going on...")
+            return
         UpdateRInven.redIMin(equipwhat)
         UpdateRInven.redIMin(equiptowhat)
         if whatrole=='Blue':
@@ -481,12 +575,58 @@ async def on_message(message):
         elif whatrole=='Red':
           UpdateRInven.redIMin(bought)
     except:
-      await message.channel.send('Errorsss')  
-  if message.content.startswith('!data'):
-    await message.channel.send(db["BlueMoney"])
+      await message.channel.send('Errorsss') 
+  if message.content.startswith("!battle"):
+    if await shopRole(message.author,message) == "Blue":
+      embed = discord.Embed()
+      embed.add_field(name="x",value="o")
+      await message.channel.send(embed=embed)
   if message.content.startswith("!dm"):
     user_id=message.content.split(" ",1)[1]
     user_id=user_id.translate({ord(i): None for i in '<>@!'})
+    print(user_id)
     await dm(user_id)
+  if message.content.startswith("!somethingthatdidn't_work"):
+    for a in shop:
+      things=[]
+      for i in shop:
+        for h in range(1):
+          things.append([Button(style=ButtonStyle.blue, label=a)])
+        break
+      await message.channel.send("Shop",components=things) #Blue button with button label of "Test"
+      thing=[]
+    res = await client.wait_for("button_click") #Wait for button to be clicked
+    await res.respond(type=4, content=f'Button Clicked')
+  if message.content.startswith("!bluebuilds"):
+    embed = discord.Embed(title="Blue Builds",description="Blue Team Built these things:")
+    List=await UpdateBbuilds.blueIo()
+    for key,value in List.items():
+      embed.add_field(name=key,value=value)
+    await message.channel.send(embed=embed)
+  if message.content.startswith("!redbuilds"):
+    embed = discord.Embed(title="Red Builds",description="Red Team Built these things:")
+    List=await UpdateRbuilds.redIo()
+    for key,value in List.items():
+      embed.add_field(name=key,value=value)
+    await message.channel.send(embed=embed)
+  if message.content.startswith("!buildadd"):
+    build=message.content.split("!buildadd ",1)[1]
+    role=shopRole
+    if role=="Blue":
+      buildinven=UpdateBbuilds.blueIo()
+    elif role=="Red":
+      buildinven=UpdateRbuilds.redIo()
+    else:
+			await message.channel.send("Your not on a team, please contact a moderator or admin to help you out!")
+		if build in buildinven.items():
+			await message.channel.send('What things what you like to put into your build?')
+			ident = message.author.name
+			itemcount=await howmuch(message,ident,message.author)
+			await message.channel.send('Are you sure you wanna do that?')
+			await shop_person(message, ident, item, message.author, itemcount)
+		else:
+			await message.channel.send("Bro you didn't even build that thing yet SMH")
+	if message.channel.id==909303344709922886 and "!assign" in message.content.lower():
+  	await message.channel.send("testing")
 keep_alive()
 client.run(my_secret)
